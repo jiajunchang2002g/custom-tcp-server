@@ -4,16 +4,6 @@ A collection of small Python networking utilities centered on a TCP key-value se
 
 The server uses a custom protocol, **not HTTP**. It supports binary data, persistent connections, and temporary values that expire after a configured number of reads.
 
-
-## Files
-
-| File | Description |
-|---|---|
-| `WebServer.py` | TCP key-value server with in-memory storage |
-| `Client.py` | Command-line client for sending one request |
-| `PacketExtr.py` | Extracts payloads from a framed byte stream |
-| `Checksum.py` | Calculates a file’s CRC32 checksum |
-
 ## Quick Start
 
 Run these commands from the project directory.
@@ -54,8 +44,6 @@ python3 Client.py HOST PORT METHOD PATH [BODY] [--body-file FILE] [--timeout SEC
 - `--body-file`: reads the request body as raw bytes from a file.
 - `--timeout`: socket timeout in seconds; defaults to `5`.
 
-`BODY` and `--body-file` cannot be used together. Paths must be ASCII and must not contain whitespace.
-
 ### Store or Replace a Value
 
 ```sh
@@ -74,8 +62,6 @@ python3 Client.py localhost 8080 GET /key/greeting
 python3 Client.py localhost 8080 DELETE /key/greeting
 ```
 
-A successful deletion returns the deleted value.
-
 ### Upload a File
 
 ```sh
@@ -91,52 +77,6 @@ The client prints a status line followed by the response body, if present, and a
 ```sh
 python3 Client.py localhost 8080 GET /key/document --timeout 10
 ```
-
-## Temporary Values and Counters
-
-Keys are permanent by default. Assigning a counter limits how many times a value can be retrieved.
-
-```sh
-# Store a value
-python3 Client.py localhost 8080 POST /key/token secret
-
-# Allow two successful reads
-python3 Client.py localhost 8080 POST /counter/token 2
-
-# Inspect the remaining reads without consuming one
-python3 Client.py localhost 8080 GET /counter/token
-
-# Consume the first read
-python3 Client.py localhost 8080 GET /key/token
-
-# Consume the final read, removing the value and counter
-python3 Client.py localhost 8080 GET /key/token
-
-# The value no longer exists
-python3 Client.py localhost 8080 GET /key/token
-```
-
-Counter behavior:
-
-- Posting a counter requires an existing key.
-- Posting again adds the supplied integer to the current counter.
-- Each successful key `GET` decrements its counter.
-- The final permitted read returns the value before removing it.
-- Temporary values cannot be overwritten or directly deleted.
-- A permanent key’s counter is reported as `Infinity`.
-- Deleting a finite counter returns its previous count and makes the key permanent again.
-
-To remove a read limit:
-
-```sh
-python3 Client.py localhost 8080 DELETE /counter/token
-```
-
-Use positive integers for counter updates. The current implementation does not reject zero, negative, or malformed counter bodies.
-
-## Protocol
-
-This is a custom protocol over TCP. It does not use HTTP headers or line endings.
 
 ### Request Format
 
@@ -174,8 +114,6 @@ A subsequent retrieval:
 GET /key/name  
 200 OK Content-Length 5  Alice
 ```
-
-The server supports multiple requests per connection and buffers partial requests and bytes belonging to subsequent requests. The command-line client opens a new connection for each invocation.
 
 ### Routes
 
@@ -218,28 +156,15 @@ Output:
 Hello world
 ```
 
-The extractor buffers partial packets and flushes each complete payload immediately.
+The program buffers partial packets and flushes each complete payload immediately.
 
-**Current limitation:** input must contain complete, correctly formatted packets. EOF with an incomplete packet can cause the script to loop indefinitely.
+Example:
 
-```sh
-python3 Checksum.py README.md
+```python
+python3 PacketExtr.py < test.in > test.out
 ```
 
-The script reads the entire file as bytes and prints its CRC32 checksum as a decimal integer.
-
 ## Testing
-
-For a manual smoke test:
-
-1. Start the server.
-2. Store a value and verify that retrieval returns it.
-3. Replace the value and verify the updated contents.
-4. Delete it and verify that another retrieval returns `404 NotFound`.
-5. Store another value and assign a counter of `2`.
-6. Verify that two reads succeed and the third returns `404 NotFound`.
-7. Verify that overwriting or deleting a temporary value returns `405 MethodNotAllowed`.
-
 
 ## Limitations
 

@@ -1,8 +1,8 @@
 # TCP key-value server
 
-A collection of small Python networking utilities centered on a TCP key-value server and its command-line client.
-
 The server uses a custom protocol, **not HTTP**. It supports binary data, persistent connections, and temporary values that expire after a configured number of reads.
+
+<img width="2553" height="1510" alt="image" src="https://github.com/user-attachments/assets/9c0ad31a-c803-4fc3-81a5-a66f581c7e22" />
 
 ## Quick Start
 
